@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Congklak Nusantara</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap');
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f4e1c1;
+            background-image: radial-gradient(#d4a373 1px, transparent 1px);
+            background-size: 20px 20px;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        .wood-board {
+            background: linear-gradient(145deg, #6b4423, #4a2f18);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), inset 0 2px 10px rgba(255, 255, 255, 0.1);
+            border: 4px solid #38220f;
+        }
+
+        .hole {
+            background: linear-gradient(145deg, #2c1a0e, #3a2313);
+            box-shadow: inset 0 5px 10px rgba(0,0,0,0.8), 0 2px 2px rgba(255,255,255,0.1);
+            transition: all 0.2s ease;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .hole:hover.interactable {
+            transform: scale(1.05);
+            box-shadow: inset 0 5px 15px rgba(0,0,0,0.9), 0 0 10px 2px #d4a373;
+        }
+
+        .hole.active-turn {
+            box-shadow: inset 0 5px 10px rgba(0,0,0,0.8), 0 0 15px 3px #f4a261;
+            border: 2px solid #f4a261;
+        }
+
+        .hole.pop {
+            animation: popAnim 0.2s ease-out;
+            background: linear-gradient(145deg, #4a2d18, #3a2313);
+        }
+
+        @keyframes popAnim {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+
+        /* --- STYLING BIJI CONGKLAK --- */
+        .seeds-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 75%;
+            height: 75%;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .seed {
+            position: absolute;
+            border-radius: 40% 60% 60% 40% / 50% 50% 50% 50%; /* Bentuk tidak bulat sempurna (kerang/batu) */
+            box-shadow: 1px 1px 3px rgba(0,0,0,0.8), inset -1px -1px 2px rgba(0,0,0,0.4);
+            transition: all 0.3s ease;
+        }
+
+        .seed-count {
+            z-index: 20;
+            position: relative;
+            background-color: rgba(0, 0, 0, 0.55);
+            padding: 0.15rem 0.6rem;
+            border-radius: 1rem;
+            backdrop-filter: blur(2px);
+            text-shadow: 1px 1px 2px black;
+        }
+
+        .floating-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            font-weight: 900;
+            color: #fff;
+            text-transform: uppercase;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.8), 0 0 20px #e76f51;
+            pointer-events: none;
+            opacity: 0;
+            z-index: 50;
+        }
+
+        .animate-float {
+            animation: floatUp 1.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 0; transform: translate(-50%, 0) scale(0.5); }
+            20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            80% { opacity: 1; transform: translate(-50%, -60%) scale(1); }
+            100% { opacity: 0; transform: translate(-50%, -100%) scale(0.8); }
+        }
+
+        .lumbung {
+            border-radius: 40px;
+        }
+        
+        .bot-indicator {
+            animation: pulse 1.5s infinite;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- MAIN MENU -->
+    <div id="main-menu" class="flex flex-col items-center bg-white p-8 md:p-12 rounded-3xl shadow-2xl max-w-md w-full text-center border-4 border-[#8b5a2b]">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-[#4a2f18] mb-2 tracking-wide">CONGKLAK</h1>
+        <p class="text-[#8b5a2b] font-semibold mb-8 text-lg">Nusantara Edition</p>
+        
+        <div class="space-y-4 w-full">
+            <button onclick="startGame('bot')" class="w-full py-4 bg-gradient-to-r from-[#e76f51] to-[#f4a261] hover:from-[#d65f41] hover:to-[#e39150] text-white rounded-xl font-bold text-xl shadow-lg transform transition hover:-translate-y-1">
+                <i class="fas fa-robot mr-2"></i> Lawan Bot
+            </button>
+            <button onclick="startGame('pvp')" class="w-full py-4 bg-gradient-to-r from-[#2a9d8f] to-[#264653] hover:from-[#21867a] hover:to-[#1a323d] text-white rounded-xl font-bold text-xl shadow-lg transform transition hover:-translate-y-1">
+                <i class="fas fa-user-friends mr-2"></i> Lawan Teman
+            </button>
+            <button onclick="showTutorial()" class="w-full py-3 mt-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl font-bold text-lg shadow-md transform transition hover:-translate-y-1 border-2 border-gray-300">
+                <i class="fas fa-book-open mr-2"></i> Cara Bermain
+            </button>
+        </div>
+        
+        <p class="mt-6 text-sm text-gray-500"><i class="fas fa-volume-up"></i> Nyalakan suara untuk pengalaman terbaik</p>
+    </div>
+
+    <!-- TUTORIAL MODAL -->
+    <div id="tutorial-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm p-4">
+        <div class="bg-white p-6 md:p-8 rounded-3xl shadow-2xl max-w-lg w-full text-left border-4 border-[#2a9d8f] relative overflow-y-auto max-h-[90vh]">
+            <h2 class="text-2xl md:text-3xl font-extrabold text-[#264653] mb-4 border-b-2 border-gray-200 pb-2">
+                <i class="fas fa-book-open mr-2 text-[#e76f51]"></i> Cara Bermain
+            </h2>
+            <ul class="space-y-4 text-gray-700 font-medium text-sm md:text-base">
+                <li class="flex items-start"><i class="fas fa-circle text-[#2a9d8f] text-xs mt-1.5 mr-3"></i> <span><strong>Persiapan:</strong> Setiap lubang kecil berisi 7 biji. Lumbung (lubang besar di ujung) kosong.</span></li>
+                <li class="flex items-start"><i class="fas fa-circle text-[#2a9d8f] text-xs mt-1.5 mr-3"></i> <span><strong>Cara Jalan:</strong> Pemain memilih salah satu lubang di sisinya. Biji akan diambil dan dibagikan satu per satu searah jarum jam.</span></li>
+                <li class="flex items-start"><i class="fas fa-circle text-[#2a9d8f] text-xs mt-1.5 mr-3"></i> <span><strong>Giliran Ekstra:</strong> Jika biji terakhir jatuh di <strong>Lumbung Anda</strong>, Anda mendapat giliran tambahan.</span></li>
+                <li class="flex items-start"><i class="fas fa-circle text-[#2a9d8f] text-xs mt-1.5 mr-3"></i> <span><strong>Lanjut:</strong> Jika biji terakhir jatuh di lubang yang <strong>ada isinya</strong>, ambil semua biji di lubang tersebut dan lanjutkan putaran.</span></li>
+                <li class="flex items-start"><i class="fas fa-circle text-[#e76f51] text-xs mt-1.5 mr-3"></i> <span><strong>Tembak:</strong> Jika biji terakhir jatuh di lubang <strong>kosong di area sendiri</strong>, Anda berhak mengambil biji lawan yang ada tepat di seberang lubang tersebut masuk ke lumbung Anda.</span></li>
+                <li class="flex items-start"><i class="fas fa-circle text-[#e76f51] text-xs mt-1.5 mr-3"></i> <span><strong>Menang:</strong> Permainan selesai jika salah satu sisi pemain kosong. Pemenang adalah yang mengumpulkan biji terbanyak di lumbungnya!</span></li>
+            </ul>
+            <button onclick="hideTutorial()" class="mt-6 w-full py-3 bg-[#264653] hover:bg-[#1a323d] text-white rounded-xl font-bold text-lg shadow-md transition">
+                Mengerti!
+            </button>
+        </div>
+    </div>
+
+    <!-- Animated Hand -->
+    <div id="animated-hand" class="fixed pointer-events-none z-[100] opacity-0 drop-shadow-2xl" style="font-size: 3.5rem; transition-property: top, left, opacity; transition-timing-function: cubic-bezier(0.25, 0.8, 0.25, 1); top: -100px; left: -100px; transform: translate(-50%, -50%);">🖐️</div>
+
+    <!-- TURN ANNOUNCEMENT POPUP -->
+    <div id="turn-popup" class="fixed inset-0 z-[150] flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-300">
+        <div id="turn-popup-box" class="bg-white/90 backdrop-blur-md px-10 md:px-16 py-8 rounded-[40px] shadow-[0_0_50px_rgba(0,0,0,0.5)] border-4 transform scale-50 transition-transform duration-300">
+            <h2 id="turn-popup-text" class="text-4xl md:text-6xl font-extrabold uppercase tracking-widest text-center">Giliran P1</h2>
+        </div>
+    </div>
+
+    <!-- GAME CONTAINER -->
+    <div id="game-container" class="hidden flex-col items-center w-full max-w-5xl relative">
+        
+        <!-- Header / Status -->
+        <div class="w-full flex justify-between items-center mb-6 bg-white/80 backdrop-blur-sm p-4 rounded-2xl shadow-md border-2 border-[#d4a373]">
+            <button onclick="returnToMenu()" class="text-[#e76f51] hover:text-[#d65f41] font-bold text-lg"><i class="fas fa-arrow-left"></i> Kembali</button>
+            
+            <div class="text-center flex-1 mx-4">
+                <h2 id="turn-indicator" class="text-2xl md:text-3xl font-extrabold text-[#264653]">Giliran P1</h2>
+                <p id="game-status" class="text-[#e76f51] font-semibold text-sm md:text-base">Pilih lubang untuk memulai</p>
+            </div>
+            
+            <button onclick="toggleMute()" id="mute-btn" class="text-[#2a9d8f] hover:text-[#21867a] font-bold text-2xl"><i class="fas fa-volume-up"></i></button>
+        </div>
+
+        <!-- Floating Text Container -->
+        <div id="action-text" class="floating-text">TEMBAK!</div>
+
+        <!-- The Board (Fixed Layout) -->
+        <div class="wood-board rounded-[40px] md:rounded-[60px] p-3 md:p-6 flex items-center justify-between w-full shadow-2xl relative overflow-hidden box-border">
+            
+            <!-- Lumbung P2 (Kiri) -->
+            <div id="hole-15" class="hole lumbung w-14 h-40 sm:w-16 sm:h-48 md:w-24 md:h-64 flex-shrink-0 flex items-center justify-center flex-col shadow-inner relative">
+                <div id="seeds-15" class="seeds-container"></div>
+                <span class="text-white text-[10px] sm:text-xs md:text-sm font-bold opacity-90 mb-2 relative z-20">P2</span>
+                <span id="count-15" class="seed-count text-white text-xl sm:text-2xl md:text-4xl font-extrabold">0</span>
+            </div>
+
+            <!-- Lubang Kecil -->
+            <div class="flex flex-col gap-4 md:gap-8 mx-2 sm:mx-4 md:mx-6 flex-1 min-w-0">
+                <!-- Baris P2 (Atas, dari kanan ke kiri: 14 down to 8) -->
+                <div class="flex justify-between gap-1 sm:gap-2 md:gap-4" id="row-p2">
+                    <!-- Digenerate via JS agar rapi -->
+                </div>
+
+                <!-- Baris P1 (Bawah, dari kiri ke kanan: 0 up to 6) -->
+                <div class="flex justify-between gap-1 sm:gap-2 md:gap-4" id="row-p1">
+                    <!-- Digenerate via JS -->
+                </div>
+            </div>
+
+            <!-- Lumbung P1 (Kanan) -->
+            <div id="hole-7" class="hole lumbung w-14 h-40 sm:w-16 sm:h-48 md:w-24 md:h-64 flex-shrink-0 flex items-center justify-center flex-col shadow-inner relative">
+                <div id="seeds-7" class="seeds-container"></div>
+                <span class="text-white text-[10px] sm:text-xs md:text-sm font-bold opacity-90 mb-2 relative z-20">P1</span>
+                <span id="count-7" class="seed-count text-white text-xl sm:text-2xl md:text-4xl font-extrabold">0</span>
+            </div>
+
+        </div>
+        
+        <!-- Player Labels -->
+        <div class="w-full flex justify-between px-8 mt-4">
+            <div class="text-lg font-bold text-[#e76f51]" id="p2-label">Pemain 2 (Atas)</div>
+            <div class="text-lg font-bold text-[#2a9d8f]" id="p1-label">Pemain 1 (Bawah)</div>
+        </div>
+    </div>
+
+    <!-- GAME OVER MODAL -->
+    <div id="game-over-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm">
+        <div class="bg-white p-10 rounded-3xl shadow-2xl text-center border-4 border-[#e76f51] max-w-lg w-11/12 transform scale-100 transition-transform">
+            <h2 class="text-4xl font-extrabold text-[#264653] mb-4">PERMAINAN SELESAI</h2>
+            <div class="text-6xl mb-6" id="winner-icon">🏆</div>
+            <h3 id="winner-text" class="text-3xl font-bold text-[#e76f51] mb-6">Pemain 1 Menang!</h3>
+            
+            <div class="flex justify-around bg-gray-100 p-4 rounded-xl mb-8">
+                <div>
+                    <p class="text-sm text-gray-500 font-bold">Skor P1</p>
+                    <p id="score-p1" class="text-3xl font-extrabold text-[#2a9d8f]">49</p>
+                </div>
+                <div class="w-1 bg-gray-300 rounded"></div>
+                <div>
+                    <p class="text-sm text-gray-500 font-bold">Skor P2</p>
+                    <p id="score-p2" class="text-3xl font-extrabold text-[#e76f51]">49</p>
+                </div>
+            </div>
+
+            <button onclick="returnToMenu()" class="w-full py-4 bg-gradient-to-r from-[#264653] to-[#2a9d8f] hover:from-[#1a323d] hover:to-[#21867a] text-white rounded-xl font-bold text-xl shadow-lg transition">
+                Main Lagi
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- GAME STATE ---
+        let board = new Array(16).fill(7); // 0-6 P1, 7 Lumbung P1, 8-14 P2, 15 Lumbung P2
+        let turn = 0; // 0 = P1, 1 = P2
+        let gameMode = 'bot'; // 'bot' or 'pvp'
+        let isAnimating = false;
+        let isGameOver = false;
+        let gameSessionId = 0; // Penanda untuk membatalkan proses async yang berjalan
+        let botTimeout = null; // Menyimpan timeout bot
+        let gameOverTimeout = null; // Menyimpan timeout game over
+
+        // --- AUDIO SYSTEM (Web Audio API) ---
+        let audioCtx;
+        let bgmInterval;
+        let isMuted = false;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playTone(freq, type, duration, vol) {
+            if (isMuted || !audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function playDropSound() { playTone(600 + Math.random()*100, 'triangle', 0.1, 0.05); }
+        function playCaptureSound() { 
+            playTone(400, 'square', 0.2, 0.1); 
+            setTimeout(() => playTone(800, 'square', 0.3, 0.1), 100);
+        }
+        function playExtraTurnSound() {
+            playTone(523.25, 'sine', 0.1, 0.1); 
+            setTimeout(() => playTone(659.25, 'sine', 0.2, 0.1), 100); 
+        }
+        function playWinSound() {
+            [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+                setTimeout(() => playTone(freq, 'sine', 0.3, 0.1), i * 150);
+            });
+        }
+
+        function startBGM() {
+            if (bgmInterval) clearInterval(bgmInterval);
+            const pentatonic = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25]; 
+            bgmInterval = setInterval(() => {
+                if(!isMuted && audioCtx && !isGameOver) {
+                    let note = pentatonic[Math.floor(Math.random() * pentatonic.length)];
+                    playTone(note, 'sine', 0.8, 0.02);
+                }
+            }, 1000);
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            document.getElementById('mute-btn').innerHTML = isMuted ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
+        }
+
+        // --- TUTORIAL LOGIC ---
+        function showTutorial() {
+            document.getElementById('tutorial-modal').classList.remove('hidden');
+        }
+
+        function hideTutorial() {
+            document.getElementById('tutorial-modal').classList.add('hidden');
+        }
+
+        // --- DOM GENERATION & VISUAL SEEDS ---
+        function generateBoardDOM() {
+            const rowP2 = document.getElementById('row-p2');
+            const rowP1 = document.getElementById('row-p1');
+            rowP2.innerHTML = ''; rowP1.innerHTML = '';
+
+            for (let i = 14; i >= 8; i--) {
+                rowP2.innerHTML += createHoleHTML(i);
+            }
+            for (let i = 0; i <= 6; i++) {
+                rowP1.innerHTML += createHoleHTML(i);
+            }
+        }
+
+        function createHoleHTML(index) {
+            return `
+                <div id="hole-${index}" onclick="handleHoleClick(${index})" class="hole w-8 h-8 sm:w-12 sm:h-12 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full flex items-center justify-center relative flex-shrink-0">
+                    <div id="seeds-${index}" class="seeds-container"></div>
+                    <span id="count-${index}" class="seed-count text-white text-xs sm:text-sm md:text-xl font-bold">7</span>
+                </div>
+            `;
+        }
+
+        // Determenistik Random agar biji tidak bergerak-gerak liar saat diupdate
+        function seededRandom(seed) {
+            let x = Math.sin(seed++) * 10000;
+            return x - Math.floor(x);
+        }
+
+        function updateVisualSeeds(index, count) {
+            const container = document.getElementById(`seeds-${index}`);
+            if (!container) return;
+            
+            // Hindari render ulang jika jumlahnya sama
+            if (container.dataset.count == count) return;
+            container.dataset.count = count;
+            
+            container.innerHTML = '';
+            
+            // Batasi maksimal render visual biji agar performa lancar (misal lumbung isi banyak)
+            const visualCount = Math.min(count, 45); 
+            
+            for(let i = 0; i < visualCount; i++) {
+                const seedEl = document.createElement('div');
+                seedEl.className = 'seed w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4';
+                
+                // Kalkulasi radius sebar & rotasi acak secara deterministik
+                let randRadius = Math.sqrt(seededRandom(index * 100 + i)) * 40; // Max 40% dari pusat
+                let randAngle = seededRandom(index * 100 + i + 50) * Math.PI * 2;
+                
+                let top = 50 + randRadius * Math.sin(randAngle);
+                let left = 50 + Math.cos(randAngle) * randRadius;
+                
+                seedEl.style.top = `${top}%`;
+                seedEl.style.left = `${left}%`;
+                
+                // Rotasi acak kerangnya
+                let rot = seededRandom(index * 100 + i + 100) * 360;
+                seedEl.style.transform = `translate(-50%, -50%) rotate(${rot}deg)`;
+                
+                // Variasi warna ala kerang (Kuwuk)
+                const colors = ['#f4a261', '#e9c46a', '#fff3e0', '#d4a373', '#ffd54f'];
+                const color = colors[Math.floor(seededRandom(index * 100 + i + 150) * colors.length)];
+                seedEl.style.background = `radial-gradient(circle at 30% 30%, #ffffff, ${color})`;
+                
+                container.appendChild(seedEl);
+            }
+        }
+
+        function updateUI() {
+            for (let i = 0; i < 16; i++) {
+                const el = document.getElementById(`count-${i}`);
+                if (el) el.innerText = board[i];
+                
+                // Update tampilan visual biji (shells)
+                updateVisualSeeds(i, board[i]);
+                
+                const holeEl = document.getElementById(`hole-${i}`);
+                if(holeEl) {
+                    holeEl.classList.remove('interactable', 'active-turn');
+                    if (!isAnimating && !isGameOver && getOwner(i) === turn && i !== 7 && i !== 15 && board[i] > 0) {
+                        if(turn === 0 || gameMode === 'pvp') {
+                            holeEl.classList.add('interactable', 'active-turn');
+                        }
+                    }
+                }
+            }
+
+            const indicator = document.getElementById('turn-indicator');
+            const status = document.getElementById('game-status');
+            
+            if (turn === 0) {
+                indicator.innerText = "Giliran Pemain 1";
+                indicator.className = "text-2xl md:text-3xl font-extrabold text-[#2a9d8f]";
+                status.innerText = "Pilih lubang di area bawah";
+            } else {
+                indicator.innerText = gameMode === 'bot' ? "Giliran Bot" : "Giliran Pemain 2";
+                indicator.className = "text-2xl md:text-3xl font-extrabold text-[#e76f51]";
+                status.innerText = gameMode === 'bot' ? "Bot sedang berpikir..." : "Pilih lubang di area atas";
+            }
+        }
+
+        // --- HAND ANIMATION LOGIC ---
+        const delay = ms => new Promise(res => setTimeout(res, ms));
+
+        async function moveHandTo(index, gesture = '🤏', duration = 300) {
+            const hand = document.getElementById('animated-hand');
+            const holeEl = document.getElementById(`hole-${index}`);
+            if(!holeEl) return;
+            const rect = holeEl.getBoundingClientRect();
+            
+            hand.style.transitionDuration = `${duration}ms`;
+            hand.style.left = `${rect.left + rect.width / 2}px`;
+            hand.style.top = `${rect.top + rect.height / 2 - 20}px`;
+            hand.innerText = gesture;
+            hand.style.opacity = '1';
+            
+            await delay(duration);
+        }
+
+        function hideHand() {
+            const hand = document.getElementById('animated-hand');
+            hand.style.opacity = '0';
+        }
+
+        function showActionText(text, colorClass = "text-white") {
+            const el = document.getElementById('action-text');
+            el.innerText = text;
+            el.className = `floating-text animate-float ${colorClass}`;
+            setTimeout(() => { el.className = 'floating-text'; }, 1500);
+        }
+
+        async function announceTurn(turnIndex) {
+            const popup = document.getElementById('turn-popup');
+            const box = document.getElementById('turn-popup-box');
+            const text = document.getElementById('turn-popup-text');
+
+            if (turnIndex === 0) {
+                text.innerText = "GILIRAN P1";
+                text.className = "text-4xl md:text-6xl font-extrabold text-[#2a9d8f] uppercase tracking-widest text-center drop-shadow-md";
+                box.className = "bg-white/90 backdrop-blur-md px-10 md:px-16 py-8 rounded-[40px] shadow-[0_0_50px_rgba(42,157,143,0.4)] border-4 border-[#2a9d8f] transform scale-100 transition-transform duration-300";
+            } else {
+                let p2Name = gameMode === 'bot' ? "GILIRAN BOT" : "GILIRAN P2";
+                text.innerText = p2Name;
+                text.className = "text-4xl md:text-6xl font-extrabold text-[#e76f51] uppercase tracking-widest text-center drop-shadow-md";
+                box.className = "bg-white/90 backdrop-blur-md px-10 md:px-16 py-8 rounded-[40px] shadow-[0_0_50px_rgba(231,111,81,0.4)] border-4 border-[#e76f51] transform scale-100 transition-transform duration-300";
+            }
+
+            popup.classList.remove('opacity-0');
+            popup.classList.add('opacity-100');
+
+            await delay(1200);
+
+            popup.classList.remove('opacity-100');
+            popup.classList.add('opacity-0');
+            box.classList.remove('scale-100');
+            box.classList.add('scale-50');
+            
+            await delay(300); // Wait for fade out
+        }
+
+        function popHole(index) {
+            const el = document.getElementById(`hole-${index}`);
+            if(el) {
+                el.classList.remove('pop');
+                void el.offsetWidth;
+                el.classList.add('pop');
+            }
+        }
+
+        // --- GAME LOGIC ---
+        async function startGame(mode) {
+            gameSessionId++; // Memulai sesi baru
+            let currentSession = gameSessionId;
+            initAudio();
+            startBGM();
+            gameMode = mode;
+            board = new Array(16).fill(7);
+            board[7] = 0; board[15] = 0;
+            turn = 0;
+            isGameOver = false;
+            isAnimating = true; // Kunci interaksi saat popup awal muncul
+
+            // Clear visual tracker untuk maksa re-render
+            document.querySelectorAll('.seeds-container').forEach(el => el.dataset.count = "-1");
+
+            document.getElementById('main-menu').classList.add('hidden');
+            document.getElementById('game-container').classList.remove('hidden');
+            document.getElementById('game-over-modal').classList.add('hidden');
+            
+            document.getElementById('p2-label').innerText = mode === 'bot' ? 'Bot (Atas)' : 'Pemain 2 (Atas)';
+            
+            generateBoardDOM();
+            updateUI();
+
+            // Tampilkan popup turn pertama kali
+            await announceTurn(turn);
+            if (currentSession === gameSessionId) {
+                isAnimating = false; // Buka kunci interaksi setelah popup selesai
+            }
+        }
+
+        function returnToMenu() {
+            gameSessionId++; // Membatalkan proses asinkron yang sedang berjalan
+            isGameOver = true;
+            isAnimating = false;
+            hideHand();
+            
+            // Sembunyikan popup turn jika sedang tampil saat kembali
+            document.getElementById('turn-popup').classList.remove('opacity-100');
+            document.getElementById('turn-popup').classList.add('opacity-0');
+
+            clearTimeout(botTimeout);
+            clearTimeout(gameOverTimeout);
+
+            document.getElementById('game-container').classList.add('hidden');
+            document.getElementById('game-over-modal').classList.add('hidden');
+            document.getElementById('main-menu').classList.remove('hidden');
+            if(bgmInterval) clearInterval(bgmInterval);
+        }
+
+        function getOwner(index) {
+            if (index >= 0 && index <= 7) return 0; // P1
+            if (index >= 8 && index <= 15) return 1; // P2
+            return -1;
+        }
+
+        function getOpposite(index) {
+            return 14 - index;
+        }
+
+        async function handleHoleClick(index) {
+            if (isAnimating || isGameOver) return;
+            if (index === 7 || index === 15) return; 
+            if (getOwner(index) !== turn) return; 
+            if (board[index] === 0) return; 
+            
+            if (turn === 1 && gameMode === 'bot') return; 
+
+            await executeTurn(index);
+        }
+
+        async function executeTurn(startIndex) {
+            let currentSession = gameSessionId; // Simpan sesi saat ini
+            isAnimating = true;
+            updateUI();
+
+            let handSeeds = board[startIndex];
+            
+            await moveHandTo(startIndex, '🖐️', 300);
+            if (currentSession !== gameSessionId) return; // Batal jika keluar
+            
+            await moveHandTo(startIndex, '✊', 200);
+            if (currentSession !== gameSessionId) return;
+
+            board[startIndex] = 0;
+            updateUI();
+            
+            let curr = startIndex;
+
+            while (true) {
+                while (handSeeds > 0) {
+                    curr = (curr + 1) % 16;
+                    
+                    if (turn === 0 && curr === 15) continue;
+                    if (turn === 1 && curr === 7) continue;
+
+                    await moveHandTo(curr, '🤏', 250);
+                    if (currentSession !== gameSessionId) return;
+
+                    board[curr]++;
+                    handSeeds--;
+                    
+                    popHole(curr);
+                    playDropSound();
+                    updateUI();
+                    await delay(100); 
+                    if (currentSession !== gameSessionId) return;
+                }
+
+                if ((turn === 0 && curr === 7) || (turn === 1 && curr === 15)) {
+                    playExtraTurnSound();
+                    showActionText("GILIRAN LAGI!");
+                    hideHand();
+                    await delay(1000);
+                    if (currentSession !== gameSessionId) return;
+
+                    isAnimating = false;
+                    checkWinCondition();
+                    if (!isGameOver && turn === 1 && gameMode === 'bot') {
+                        botTimeout = setTimeout(playBot, 500);
+                    }
+                    updateUI();
+                    return; 
+                }
+
+                if (board[curr] > 1) {
+                    handSeeds = board[curr];
+                    
+                    await moveHandTo(curr, '🖐️', 200);
+                    if (currentSession !== gameSessionId) return;
+
+                    await moveHandTo(curr, '✊', 200);
+                    if (currentSession !== gameSessionId) return;
+
+                    board[curr] = 0;
+                    popHole(curr);
+                    updateUI();
+                    showActionText("LANJUT!");
+                    await delay(200);
+                    if (currentSession !== gameSessionId) return;
+                } 
+                else {
+                    if (getOwner(curr) === turn && curr !== 7 && curr !== 15) {
+                        let opposite = getOpposite(curr);
+                        if (board[opposite] > 0) {
+                            playCaptureSound();
+                            showActionText("TEMBAK!");
+                            
+                            await moveHandTo(opposite, '✊', 350);
+                            if (currentSession !== gameSessionId) return;
+
+                            popHole(opposite);
+                            let capturedOpposite = board[opposite];
+                            board[opposite] = 0;
+                            updateUI();
+
+                            await moveHandTo(curr, '✊', 300);
+                            if (currentSession !== gameSessionId) return;
+
+                            popHole(curr);
+                            let capturedSelf = board[curr];
+                            board[curr] = 0;
+                            updateUI();
+                            
+                            let totalCaptured = capturedOpposite + capturedSelf;
+                            let targetLumbung = turn === 0 ? 7 : 15;
+
+                            await moveHandTo(targetLumbung, '🤏', 450);
+                            if (currentSession !== gameSessionId) return;
+
+                            if (turn === 0) board[7] += totalCaptured;
+                            else board[15] += totalCaptured;
+                            
+                            updateUI();
+                            await delay(600);
+                            if (currentSession !== gameSessionId) return;
+                        }
+                    }
+                    break; 
+                }
+            }
+
+            hideHand();
+            checkWinCondition();
+            
+            if (!isGameOver && currentSession === gameSessionId) {
+                turn = turn === 0 ? 1 : 0; 
+                updateUI();
+                
+                // Tampilkan popup pergantian turn
+                await announceTurn(turn);
+                if (currentSession !== gameSessionId) return;
+
+                isAnimating = false;
+                
+                if (turn === 1 && gameMode === 'bot') {
+                    botTimeout = setTimeout(playBot, 300); // Waktu jeda dipendekkan karena sudah ada delay di popup
+                }
+            }
+        }
+
+        // --- BOT LOGIC ---
+        async function playBot() {
+            if (isGameOver || turn !== 1) return;
+            
+            let validMoves = [];
+            for (let i = 8; i <= 14; i++) {
+                if (board[i] > 0) validMoves.push(i);
+            }
+
+            if (validMoves.length === 0) return;
+
+            let bestMove = validMoves[0];
+            let foundExtraTurn = false;
+
+            for (let i of validMoves) {
+                let count = board[i];
+                let endPos = i;
+                for (let step = 0; step < count; step++) {
+                    endPos = (endPos + 1) % 16;
+                    if (endPos === 7) endPos++; 
+                }
+                if (endPos === 15) {
+                    bestMove = i;
+                    foundExtraTurn = true;
+                    break;
+                }
+            }
+
+            if (!foundExtraTurn) {
+                bestMove = validMoves.reduce((a, b) => board[a] > board[b] ? a : b);
+            }
+
+            await executeTurn(bestMove);
+        }
+
+        // --- ENDGAME LOGIC ---
+        function checkSideEmpty(player) {
+            let start = player === 0 ? 0 : 8;
+            let end = player === 0 ? 6 : 14;
+            for (let i = start; i <= end; i++) {
+                if (board[i] > 0) return false;
+            }
+            return true;
+        }
+
+        function sweepRemaining(player) {
+            let start = player === 0 ? 0 : 8;
+            let end = player === 0 ? 6 : 14;
+            let targetLumbung = player === 0 ? 7 : 15;
+            let total = 0;
+            
+            for (let i = start; i <= end; i++) {
+                total += board[i];
+                board[i] = 0;
+            }
+            board[targetLumbung] += total;
+        }
+
+        function checkWinCondition() {
+            let p1Empty = checkSideEmpty(0);
+            let p2Empty = checkSideEmpty(1);
+
+            if (p1Empty || p2Empty) {
+                isGameOver = true;
+                isAnimating = true; 
+                
+                if (p1Empty) sweepRemaining(1);
+                if (p2Empty) sweepRemaining(0);
+                
+                updateUI();
+                playWinSound();
+                gameOverTimeout = setTimeout(showGameOver, 1500);
+            }
+        }
+
+        function showGameOver() {
+            const modal = document.getElementById('game-over-modal');
+            const winnerText = document.getElementById('winner-text');
+            const icon = document.getElementById('winner-icon');
+            const scoreP1 = document.getElementById('score-p1');
+            const scoreP2 = document.getElementById('score-p2');
+
+            let p1Score = board[7];
+            let p2Score = board[15];
+
+            scoreP1.innerText = p1Score;
+            scoreP2.innerText = p2Score;
+
+            if (p1Score > p2Score) {
+                winnerText.innerText = "Pemain 1 Menang!";
+                winnerText.className = "text-3xl font-bold text-[#2a9d8f] mb-6";
+                icon.innerText = "👑";
+            } else if (p2Score > p1Score) {
+                winnerText.innerText = gameMode === 'bot' ? "Bot Menang!" : "Pemain 2 Menang!";
+                winnerText.className = "text-3xl font-bold text-[#e76f51] mb-6";
+                icon.innerText = gameMode === 'bot' ? "🤖" : "👑";
+            } else {
+                winnerText.innerText = "Seri!";
+                winnerText.className = "text-3xl font-bold text-gray-600 mb-6";
+                icon.innerText = "🤝";
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+    </script>
+</body>
+</html>
